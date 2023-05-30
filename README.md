@@ -1,2 +1,2 @@
 # TumorAnalysis
-Tumor sample downstream analysis after somatic variant calling
+Small-to-large scaled somatic variant calling and downstream analysis for tumor samples/cohort
