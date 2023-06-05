@@ -23,26 +23,63 @@ cnvkit.py autobin \
     -g access-excludes.GRCh38.bed \
     -t S30409818_Padded.bed \
     --annotate refFlat.txt
-    
+
+## ---- coverage ---- ## 
+# for each sample
 for id in `cat sample.list`
 do
     bam=${id}".recal.bam"
     targetcnn=${id}".targetcoverage.cnn"
     antitargetcnn=${id}".antitargetcoverage.cnn"
-    outpath=/mnt/external/it_nfs_share_immuno/CBBI_Projects/FOLFIRINOX_Neoantigen/processed/wwang/nextflow/DNA_parsed_pipeline/04_wwangCNVcalling/data/reference/cnn
+    outpath=cnn
     
-    targets.bed=/mnt/external/it_nfs_share_immuno/CBBI_Projects/FOLFIRINOX_Neoantigen/processed/wwang/nextflow/DNA_parsed_pipeline/04_wwangCNVcalling/data/reference/S30409818_Padded.target.bed
-    antitargets.bed=/mnt/external/it_nfs_share_immuno/CBBI_Projects/FOLFIRINOX_Neoantigen/processed/wwang/nextflow/DNA_parsed_pipeline/04_wwangCNVcalling/data/reference/S30409818_Padded.antitarget.bed
+    targets.bed=S30409818_Padded.target.bed
+    antitargets.bed=S30409818_Padded.antitarget.bed
   
-## ---- coverage ---- ##
+
 cnvkit.py coverage ${bam} ${targets.bed} -o ${outpath}/${id}.targetcoverage.cnn
 cnvkit.py coverage ${bam} ${antitargets.bed} -o ${outpath}/${id}.antitargetcoverage.cnn
 
 done
 
 ## ---- build reference ---- ##
+# use ALL normal samples to build a reference
 cnvkit.py reference \
-    *coverage.cnn \
+    *PBMCs.{,anti}targetcoverage.cnn \
     -f GRCh38.primary_assembly.genome.fa \
-    -o Reference.cnn
+    -o Reference.cnn \
+    -y \ #Create a male reference: shift female samples' chrX log-coverage by -1, so the reference chrX average is -1
+    -c 
 # Provide the *.targetcoverage.cnn and *.antitargetcoverage.cnn files created by the coverage command
+
+
+## fix and segment ##
+# For each tumor sample...
+for id in `cat sample.list`
+do
+cnvkit.py fix ${id}.targetcoverage.cnn ${id}.antitargetcoverage.cnn my_reference.cnn \
+    -o Sample.cnr \
+    -c 
+done
+
+for id in `cat patient.list`
+do
+
+    tissue=organoids
+    sampleId=S${id}_${tissue}
+    normalId=S${id}_PBMCs
+
+    vcfPath=/mutect2
+    vcfFile=${vcfPath}/${sampleId}_vs_${normalId}.mutect2.filtered.vcf.gz
+
+    tumor=P${id}_${sampleId}
+    normal=P${id}_${normalId}
+    cnvkit.py segment ${sampleId}.cnr -o ${sampleId}.cns \
+        -m cbs \ # or hmm
+        --drop-low-coverage \ # Drop very-low-coverage bins before segmentation to avoid false-positive deletions in poor-quality tumor samples
+        -p 40 \
+        --smooth-cbs \
+        -v $vcf \
+        -i $tumor \
+        -n $normal 
+done
