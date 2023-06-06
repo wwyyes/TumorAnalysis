@@ -75,7 +75,7 @@ do
     tumor=P${id}_${sampleId}
     normal=P${id}_${normalId}
     cnvkit.py segment ${sampleId}.cnr -o ${sampleId}.cns \
-        -m cbs \ # or hmm
+        -m hmm \ # or cbs
         --drop-low-coverage \ # Drop very-low-coverage bins before segmentation to avoid false-positive deletions in poor-quality tumor samples
         -p 40 \
         --smooth-cbs \
