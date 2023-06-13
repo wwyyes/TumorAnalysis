@@ -83,3 +83,15 @@ do
         -i $tumor \
         -n $normal 
 done
+
+
+
+## optional call ##
+# the purity here was from PureCN
+cnvkit.py call -m clonal -y --center mode --ploidy 2 --drop-low-coverage \
+    --purity ${PureCN.purity}  \
+    -x m  -o ${sampleId}.call.cns  \
+    ${sampleId}.cns  \
+    -v {sampleId}.mutect2.ann.vep.filtered.vcf.gz  --sample-id ${tumorsampleId}  --normal-id ${normalsampleId}
+    
+    
